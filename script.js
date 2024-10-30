@@ -3,9 +3,10 @@ class Ball {
         this.x = x;
         this.y = y;
         this.radius = radius;
-        this.isDragging = false;
         this.color = color;
         this.speed = 5;
+        this.vx = 0;
+        this.vy = 0;
     }
 
     draw(ctx) {
@@ -14,6 +15,34 @@ class Ball {
         ctx.fillStyle = this.color;
         ctx.fill();
         ctx.closePath();
+    }
+
+    collideWith(other) {
+        const dx = other.x - this.x;
+        const dy = other.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < this.radius + other.radius) {
+            const angle = Math.atan2(dy, dx);
+            const sin = Math.sin(angle);
+            const cos = Math.cos(angle);
+
+            const moveX = (this.radius + other.radius - distance) * cos / 2;
+            const moveY = (this.radius + other.radius - distance) * sin / 2;
+
+            this.x -= moveX;
+            this.y -= moveY;
+            other.x += moveX;
+            other.y += moveY;
+
+            this.color = '#ff3333';
+            other.color = '#3333ff';
+            
+            setTimeout(() => {
+                this.color = '#ff0000';
+                other.color = '#0000ff';
+            }, 100);
+        }
     }
 }
 
@@ -98,15 +127,40 @@ function animate() {
     if (keys.a) wasdBall.x -= wasdBall.speed;
     if (keys.d) wasdBall.x += wasdBall.speed;
     
-    // Keep WASD ball within bounds
+    // Keep balls within bounds
     wasdBall.x = Math.max(wasdBall.radius, Math.min(canvas.width - wasdBall.radius, wasdBall.x));
     wasdBall.y = Math.max(wasdBall.radius, Math.min(canvas.height - wasdBall.radius, wasdBall.y));
     
-    // Draw both balls
+    mouseBall.x = Math.max(mouseBall.radius, Math.min(canvas.width - mouseBall.radius, mouseBall.x));
+    mouseBall.y = Math.max(mouseBall.radius, Math.min(canvas.height - mouseBall.radius, mouseBall.y));
+    
+    // Check for collision
+    wasdBall.collideWith(mouseBall);
+    
+    // Draw balls
     wasdBall.draw(ctx);
     mouseBall.draw(ctx);
     
     requestAnimationFrame(animate);
 }
+
+// Function to resize canvas
+function resizeCanvas() {
+    canvas.width = window.innerWidth - 4; // -4 to account for border
+    canvas.height = 400;  // Keep height fixed
+    
+    // Ensure balls stay within new boundaries
+    wasdBall.x = Math.max(wasdBall.radius, Math.min(canvas.width - wasdBall.radius, wasdBall.x));
+    wasdBall.y = Math.max(wasdBall.radius, Math.min(canvas.height - wasdBall.radius, wasdBall.y));
+    
+    mouseBall.x = Math.max(mouseBall.radius, Math.min(canvas.width - mouseBall.radius, mouseBall.x));
+    mouseBall.y = Math.max(mouseBall.radius, Math.min(canvas.height - mouseBall.radius, mouseBall.y));
+}
+
+// Initial setup
+resizeCanvas();
+
+// Add resize event listener
+window.addEventListener('resize', resizeCanvas);
 
 animate();
