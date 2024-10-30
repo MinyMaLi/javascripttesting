@@ -4,9 +4,47 @@ class Ball {
         this.y = y;
         this.radius = radius;
         this.color = color;
-        this.speed = 5;
         this.vx = 0;
         this.vy = 0;
+        this.gravity = 0.5;
+        this.friction = 0.99;
+        this.bounce = 0.8;
+        this.isDragging = false;
+    }
+
+    update() {
+        // Apply gravity
+        this.vy += this.gravity;
+        
+        // Apply velocity
+        this.x += this.vx;
+        this.y += this.vy;
+        
+        // Apply air friction
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        
+        // Bottom boundary bounce
+        if (this.y + this.radius > canvas.height) {
+            this.y = canvas.height - this.radius;
+            this.vy = -this.vy * this.bounce;
+        }
+        
+        // Top boundary bounce
+        if (this.y - this.radius < 0) {
+            this.y = this.radius;
+            this.vy = -this.vy * this.bounce;
+        }
+        
+        // Side boundaries bounce
+        if (this.x + this.radius > canvas.width) {
+            this.x = canvas.width - this.radius;
+            this.vx = -this.vx * this.bounce;
+        }
+        if (this.x - this.radius < 0) {
+            this.x = this.radius;
+            this.vx = -this.vx * this.bounce;
+        }
     }
 
     draw(ctx) {
@@ -35,6 +73,13 @@ class Ball {
             other.x += moveX;
             other.y += moveY;
 
+            const tempVx = this.vx * this.bounce;
+            const tempVy = this.vy * this.bounce;
+            this.vx = other.vx * this.bounce;
+            this.vy = other.vy * this.bounce;
+            other.vx = tempVx;
+            other.vy = tempVy;
+
             this.color = '#ff3333';
             other.color = '#3333ff';
             
@@ -43,6 +88,12 @@ class Ball {
                 other.color = '#0000ff';
             }, 100);
         }
+    }
+
+    isPointInside(x, y) {
+        const dx = this.x - x;
+        const dy = this.y - y;
+        return Math.sqrt(dx * dx + dy * dy) <= this.radius;
     }
 }
 
@@ -56,83 +107,55 @@ canvas.height = 400;
 const wasdBall = new Ball(200, canvas.height / 2, 40, '#ff0000');
 const mouseBall = new Ball(600, canvas.height / 2, 40, '#0000ff'); // New blue ball
 
-// WASD controls (existing code)
-const keys = {
-    w: false,
-    a: false,
-    s: false,
-    d: false
-};
+// Mouse control variables
+let selectedBall = null;
 
-window.addEventListener('keydown', (e) => {
-    switch(e.key.toLowerCase()) {
-        case 'w': keys.w = true; break;
-        case 'a': keys.a = true; break;
-        case 's': keys.s = true; break;
-        case 'd': keys.d = true; break;
-    }
-});
-
-window.addEventListener('keyup', (e) => {
-    switch(e.key.toLowerCase()) {
-        case 'w': keys.w = false; break;
-        case 'a': keys.a = false; break;
-        case 's': keys.s = false; break;
-        case 'd': keys.d = false; break;
-    }
-});
-
-// Mouse controls for the second ball
-let isMouseDown = false;
-
+// Mouse event listeners
 canvas.addEventListener('mousedown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
-    const distance = Math.sqrt(
-        Math.pow(mouseX - mouseBall.x, 2) + 
-        Math.pow(mouseY - mouseBall.y, 2)
-    );
-    
-    if (distance < mouseBall.radius) {
-        isMouseDown = true;
-        mouseBall.color = '#0066ff'; // Lighter blue when clicked
+    // Check both balls, prioritize the one on top (last drawn)
+    if (mouseBall.isPointInside(mouseX, mouseY)) {
+        selectedBall = mouseBall;
+        mouseBall.color = '#3333ff'; // Brighter blue
+    } else if (wasdBall.isPointInside(mouseX, mouseY)) {
+        selectedBall = wasdBall;
+        wasdBall.color = '#ff3333'; // Brighter red
     }
 });
 
 canvas.addEventListener('mousemove', (e) => {
-    if (isMouseDown) {
+    if (selectedBall) {
         const rect = canvas.getBoundingClientRect();
-        mouseBall.x = e.clientX - rect.left;
-        mouseBall.y = e.clientY - rect.top;
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
         
-        mouseBall.x = Math.max(mouseBall.radius, Math.min(canvas.width - mouseBall.radius, mouseBall.x));
-        mouseBall.y = Math.max(mouseBall.radius, Math.min(canvas.height - mouseBall.radius, mouseBall.y));
+        // Move towards mouse position
+        selectedBall.vx = (mouseX - selectedBall.x) * 0.1;
+        selectedBall.vy = (mouseY - selectedBall.y) * 0.1;
     }
 });
 
 canvas.addEventListener('mouseup', () => {
-    isMouseDown = false;
-    mouseBall.color = '#0000ff'; // Back to original blue
+    if (selectedBall) {
+        if (selectedBall === wasdBall) {
+            selectedBall.color = '#ff0000'; // Original red
+        } else {
+            selectedBall.color = '#0000ff'; // Original blue
+        }
+        selectedBall = null;
+    }
 });
 
 // Animation loop
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Update WASD ball position
-    if (keys.w) wasdBall.y -= wasdBall.speed;
-    if (keys.s) wasdBall.y += wasdBall.speed;
-    if (keys.a) wasdBall.x -= wasdBall.speed;
-    if (keys.d) wasdBall.x += wasdBall.speed;
-    
-    // Keep balls within bounds
-    wasdBall.x = Math.max(wasdBall.radius, Math.min(canvas.width - wasdBall.radius, wasdBall.x));
-    wasdBall.y = Math.max(wasdBall.radius, Math.min(canvas.height - wasdBall.radius, wasdBall.y));
-    
-    mouseBall.x = Math.max(mouseBall.radius, Math.min(canvas.width - mouseBall.radius, mouseBall.x));
-    mouseBall.y = Math.max(mouseBall.radius, Math.min(canvas.height - mouseBall.radius, mouseBall.y));
+    // Update ball physics
+    wasdBall.update();
+    mouseBall.update();
     
     // Check for collision
     wasdBall.collideWith(mouseBall);
