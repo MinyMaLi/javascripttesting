@@ -1,0 +1,41 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+header {
+    background-color: #333;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+}
+
+nav {
+    margin: 1rem 0;
+}
+
+nav a {
+    margin-right: 1rem;
+    color: #333;
+    text-decoration: none;
+}
+
+nav a:hover {
+    color: #666;
+    text-decoration: underline;
+}
+
+.content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+canvas {
+    border: 2px solid #333;
+    display: block;
+    margin: 20px auto;
+    background-color: #f0f0f0;
+    max-width: 100%;
+} 
